@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+
+.counties {
+  fill: none;
+}
+
+.states {
+  fill: none;
+  stroke: #fff;
+  stroke-linejoin: round;
+}
+
+#year {
+  float: right;
+}
+
+</style>
+<title>Tweets sentiment analysis</title>
+  <link rel="stylesheet" href="lib/css//bootstrap.min.css">
+  <link rel="stylesheet" href="lib/css/keen-dashboards.css">
+
+</head>
+<body class = "application">
+  <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+      <div class="container-fluid" style="height:50px;">
+          <div class="navbar-header">
+            <a class="navbar-brand" href="/">Tweets sentiment analysis</a>                
+          </div>
+      </div>
+    </div>
+  <div class="container-fluid">
+    <div class = "col-sm-12">
+    <div class = "row">
+      <div class="col-sm-12">
+            <div class="chart-wrapper">
+              <div class="chart-title">
+                map
+                <select id='year'></select>
+              </div>
+              <div class="chart-stage">
+                <div id = 'map' width=960 height=600></div>
+              </div>
+            </div>
+          </div>
+    </div>
+    </div>
+  
+    <div  class = "col-sm-12">
+        <div class="col-sm-12">
+            <div class="chart-wrapper">
+              <div class="chart-title">
+                Line Chart
+              </div>
+              <div class="chart-stage" >
+                <svg id = 'chart' width=600 height=400></svg>
+              </div>
+            </div>
+          </div>
+    </div>
+   </div>   
+   </div>
+  </div>
+  <hr><p class="small text-muted">Built with by TBD</p>
+  <script type="text/javascript" src="lib/js/queue.js"></script>
+  <script src="lib/js/jquery.min.js"></script>
+  <script src="lib/js/bootstrap.min.js"></script>
+  <script src="lib/js/crossfilter.js"></script>
+  <script src="lib/js/keen.min.js"></script>
+  <script src="https://d3js.org/d3.v4.min.js"></script>
+  <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+  <script src="https://d3js.org/topojson.v2.min.js"></script>
+  <link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
+  <script>
+
+
+var tweet_number = d3.map();
+for(var i = 0; i < 6; i++){
+  d3.select('#year').append('option').attr('value',i).text(i+2011).on('select');
+}
+d3.select('#year').on('change',selectOnChange);
+
+d3.queue()
+    .defer(d3.json, "https://d3js.org/us-10m.v1.json")
+    .defer(d3.csv, "result.csv", function(d) {tweet_number.set(parseInt(d.id),
+      [+d.c1, +d.c1,+d.c2,+d.c3,+d.c4,+d.c5,+d.c6]
+      );})
+    // .defer(d3.tsv, "tweet_number.tsv", function(d) {tweet_number.set(d.id, d.rate);})
+    .await(ready);
+
+
+function ready(error, us) {
+  if (error) throw error;
+  drawMap(us, 0)
+}
+
+function drawLineGraph(id){
+  d3.select("#chart").selectAll("*").remove();
+  var svg = d3.select("#chart"),
+  data = tweet_number.get(parseInt(id)),
+  margin = {top: 20, right: 20, bottom: 30, left: 50},
+  width = +svg.attr("width") - margin.left - margin.right,
+  height = +svg.attr("height") - margin.top - margin.bottom,
+  g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  var x = d3.scaleLinear()
+      .rangeRound([0, width]);
+
+  var y = d3.scaleLinear()
+      .rangeRound([height, 0]);
+
+  var line = d3.line()
+      .x(function(d,i) { return x(i+2011); })
+      .y(function(d) { return y(d); });
+
+    x.domain(d3.extent(data, function(d,i) { return i+2011; }));
+    y.domain(d3.extent(data, function(d) { return d; }));
+
+    g.append("g")
+        .attr("transform", "translate(0," + height + ")")
+        .call(d3.axisBottom(x).ticks(5)
+        .tickFormat(d3.format("d")));
+
+
+    g.append("g")
+        .call(d3.axisLeft(y))
+      .append("text")
+        .attr("fill", "#000")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", "0.71em")
+        .attr("text-anchor", "end")
+        .text("Price ($)");
+
+    g.append("path")
+        .datum(data)
+        .attr("fill", "none")
+        .attr("stroke", "steelblue")
+        .attr("stroke-linejoin", "round")
+        .attr("stroke-linecap", "round")
+        .attr("stroke-width", 1.5)
+        .attr("d", line);
+}
+
+function drawMap(us,year){
+  console.log(us)
+  console.log('do something',year);
+  var path = d3.geoPath();
+  d3.select("#map1").remove();
+  var svg = d3.select("#map").append('svg').attr("width",960).attr("height",600).attr('id','map1'),
+  width = +svg.attr("width"),
+  height = +svg.attr("height");
+  console.log(width,height)
+  svg.selectAll('*').remove();
+  var x = d3.scaleLinear()
+      .domain([1, 10])
+      .rangeRound([600, 860]);
+
+  var color = d3.scaleThreshold()
+      .domain(d3.range(2, 10))
+      .range(d3.schemeBlues[9]);
+
+  var g = svg.append("g")
+      .attr("class", "key")
+      .attr("transform", "translate(0,40)");
+
+  g.selectAll("rect")
+    .data(color.range().map(function(d) {
+        d = color.invertExtent(d);
+        if (d[0] == null) d[0] = x.domain()[0];
+        if (d[1] == null) d[1] = x.domain()[1];
+        return d;
+      }))
+    .enter().append("rect")
+      .attr("height", 8)
+      .attr("x", function(d) { return x(d[0]); })
+      .attr("width", function(d) { return x(d[1]) - x(d[0]); })
+      .attr("fill", function(d) { return color(d[0]); });
+
+  g.append("text")
+      .attr("class", "caption")
+      .attr("x", x.range()[0])
+      .attr("y", -6)
+      .attr("fill", "#000")
+      .attr("text-anchor", "start")
+      .attr("font-weight", "bold")
+      .text("satety/peace tweets");
+      console.log(tweet_number)
+  g.call(d3.axisBottom(x)
+      .tickSize(13)
+      .tickFormat(function(x, i) { return x + "m"; })
+      .tickValues(color.domain()))
+    .select(".domain")
+      .remove();
+        svg.append("g")
+        .attr("class", "counties")
+      .selectAll("path")
+      .data(topojson.feature(us, us.objects.counties).features)
+      .enter().append("path")
+        .attr("fill", function(d) {
+          if(tweet_number.get(parseInt(d.id))) 
+            return color(d.number = (tweet_number.get(parseInt(d.id)))[year]);
+          else 
+            return 0;
+        })
+        .attr("d", path)
+        .on('click',function(d){drawLineGraph(d.id)})
+      .append("title")
+        .text(function(d) { return d.number; });
+
+    svg.append("path")
+        .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
+        .attr("class", "states")
+        .attr("d", path);
+}
+
+function selectOnChange(){
+  console.log('did sth')
+  d3.json("https://d3js.org/us-10m.v1.json",function(us){drawMap(us,document.getElementById("year").value)})
+}
+
+
+</script>
+
+
+
+
+</body>

@@ -1,0 +1,7 @@
+Decode Error Count = 0
+User not found = 161956
+Total Tweets Streamed = 518672
+Unique Users = 320630
+User without location info = 68705
+US User Count = 124732
+US User without proper location = 60517
